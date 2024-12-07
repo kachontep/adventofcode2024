@@ -13,7 +13,7 @@ class Level:
         return [a - b for a, b in zip(values[:-1], values[1:])]
     
     @staticmethod
-    def check_monotical_list(values: list[int]) -> bool:
+    def check_monotical(values: list[int]) -> bool:
         _, increasing, decreasing = reduce(
             lambda c, x: (c[0] + x, c[1] and c[0] + x > c[0], c[2] and c[0] + x < c[0]),
             Level.get_detlas(values),
@@ -22,14 +22,14 @@ class Level:
         return increasing or decreasing
 
     @staticmethod
-    def check_diff_spread(values: list[int]) -> bool:
+    def check_delta(values: list[int]) -> bool:
         deltas: list[int] = Level.get_detlas(values)
         delta_over = any(filter(lambda d: d == 0 or d > 3, (abs(d) for d in deltas)))  # type: ignore
         return not delta_over
 
     @staticmethod
     def check_safe(values, removal_allows: bool = True) -> bool:
-        safety = Level.check_monotical_list(values) and Level.check_diff_spread(values)
+        safety = Level.check_monotical(values) and Level.check_delta(values)
         if safety:
             return True
         if removal_allows:
