@@ -1,7 +1,7 @@
 import sys
 from dataclasses import dataclass
 from functools import reduce
-from typing import Iterator, Tuple
+from typing import Iterator
 
 
 @dataclass
