@@ -18,7 +18,7 @@ class Equation:
         return result
 
     @property
-    def resolvable(self) -> bool:
+    def has_solution(self) -> bool:
         operator_size = len(self.numbers) - 1
         first_value, *remains = self.numbers
         for operator_trial in generate_trials(operator_size):
@@ -66,8 +66,8 @@ def generate_trials(size: int) -> Iterator[list[str]]:
 
 def solve_part1_and_part2():
     equations = [Equation.from_s(line) for line in sys.stdin.readlines()]
-    resolvable_equations = [e for e in equations if e.resolvable]
-    answer = sum(e.solution for e in resolvable_equations)
+    solvable_equations = [e for e in equations if e.has_solution]
+    answer = sum(e.solution for e in solvable_equations)
     print(answer)
 
 def main():
