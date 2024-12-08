@@ -28,7 +28,9 @@ class Equation:
                     value += operand
                 elif operator == "*":
                     value *= operand
-            # show_expression(self.numbers, operator_trial, self.solution, value)
+                elif operator == "||":
+                    value = int(str(value) + str(operand))
+            # display_equation(self.numbers, operator_trial, self.solution, value)
             if self.solution == value:
                 return True
         return False
@@ -43,9 +45,11 @@ def display_equation(
     print(", solution:", solution, ", actual:", actual)
 
 
+EQUATION_OPERATORS = ["+", "*", "||"]
+
 def generate_trials(size: int) -> Iterator[list[str]]:
     oprs = ["+"] * size
-    for _ in range(2**size):
+    for _ in range(len(EQUATION_OPERATORS)**size):
         yield oprs
         oprs = oprs[:]
         for pos in range(size):
@@ -54,17 +58,20 @@ def generate_trials(size: int) -> Iterator[list[str]]:
                     oprs[pos] = "*"
                     break
                 case "*":
+                    oprs[pos] = "||"
+                    break
+                case "||":
                     oprs[pos] = "+"
 
 
-def solve_part1():
+def solve_part1_and_part2():
     equations = [Equation.from_s(line) for line in sys.stdin.readlines()]
     resolvable_equations = [e for e in equations if e.resolvable]
     answer = sum(e.solution for e in resolvable_equations)
     print(answer)
 
 def main():
-    solve_part1()
+    solve_part1_and_part2()
 
 
 if __name__ == "__main__":
