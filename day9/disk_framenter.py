@@ -1,4 +1,3 @@
-from os import read
 import sys
 from functools import reduce
 from collections import namedtuple
@@ -16,11 +15,12 @@ def read_blocks() -> list[Block]:
 
 
 def checksum(blocks: list[Block]) -> int:
-    def block_sum(start_pos: int, total: int, b: Block) -> tuple[int, int]:
-        block_total = 0
-        if b.id != SPACE_ID:
-            block_total = sum(i * b.id for i in range(start_pos, start_pos + b.size))
-        return start_pos + b.size, total + block_total
+    def block_sum(start_pos: int, bs_sum: int, b: Block) -> tuple[int, int]:
+        if b.id == SPACE_ID:
+            return start_pos + b.size, bs_sum
+        else:
+            b_sum = sum(i * b.id for i in range(start_pos, start_pos + b.size))
+            return start_pos + b.size, bs_sum + b_sum
 
     _, result = reduce(
         lambda c, b: block_sum(c[0], c[1], b),
@@ -74,71 +74,103 @@ def compress_blocks_part1(blocks: list[Block]) -> list[Block]:
     return compressed
 
 
-def combine_space_blocks(blocks: list[Block]) -> list[Block]:
-    result = blocks[:1][:]
-    for current_block in blocks[1:]:
-        if current_block.id == SPACE_ID and result[-1].id == SPACE_ID:
-            last_block = result.pop()
-            result.append(Block(SPACE_ID, last_block.size + current_block.size))
-        else:
-            result.append(current_block)
-    return result
+def compact_spaces(blocks: list[Block]) -> list[Block]:
+    begin_space_idx = None
+    block_len = len(blocks)
+    block_size = block_len
+    idx = 0
+    while idx < block_size:
+        b = blocks[idx]
+
+        if b.id != SPACE_ID:
+            if begin_space_idx and idx - begin_space_idx > 1:
+                compacted = [b_.size for b_ in blocks[begin_space_idx : idx + 1]]
+                compacted_more_idx = len(compacted) - 1
+                sum_compacted_spaces = sum(compacted)
+                new_space_blocks = [Block(SPACE_ID, sum_compacted_spaces)]
+
+                blocks = (
+                    blocks[:begin_space_idx]
+                    + new_space_blocks
+                    + blocks[idx + 1 :]
+                )
+                block_size -= compacted_more_idx
+                begin_space_idx = None
+        elif not begin_space_idx:
+            begin_space_idx = idx
+
+        idx += 1
+    return blocks
 
 
 def compress_blocks_part2(blocks: list[Block]) -> list[Block]:
-    done = False
-    curr_blocks = blocks[:]
+    do_more = True
 
-    while not done:
-        moves = 0
-        left = 0
-        right = len(curr_blocks) - 1
-        subblocks_left = []
-        subblocks_right = []
+    while do_more:
+        do_more = False
 
-        while left <= right:
-            left_block, right_block = curr_blocks[left], curr_blocks[right]
+        left_index = 0
+        right_index = len(blocks) - 1
 
-            if left_block.id != SPACE_ID:
-                subblocks_left.append(left_block)
-                left += 1
+        while right_index > 0:
+            target_block = blocks[right_index]
+
+            if target_block.id == SPACE_ID:
+                right_index -= 1
                 continue
 
-            if right_block.id == SPACE_ID:
-                subblocks_right.append(right_block)
-                right -= 1
-                continue
+            space_block_index = -1
+            space_block = None
+            left_index = 0
 
-            _, space_left = left_block
-            right_block_id, space_used = right_block
+            while left_index < right_index:
+                left_block = blocks[left_index]
+                if (
+                    left_block.id == SPACE_ID
+                    and left_block.size >= blocks[right_index].size
+                ):
+                    space_block_index = left_index
+                    space_block = left_block
+                    break
+                left_index += 1
 
-            if space_left >= space_used:
-                subblocks_right.append(Block(SPACE_ID, space_used))
+            if space_block:
+                do_more = True
+                target_space_blocks = [Block(SPACE_ID, target_block.size)]
 
-                subblocks_left.append(Block(right_block_id, space_used))
-                if space_left > space_used:
-                    subblocks_left.append(Block(SPACE_ID, space_left - space_used))
+                if space_block.size > target_block.size:
+                    new_space_block = Block(
+                        SPACE_ID, space_block.size - target_block.size
+                    )
+                    movement_blocks = [target_block, new_space_block]
+                else:
+                    movement_blocks = [target_block]
 
-                moves += 1
-                left += 1
-                right -= 1
-            else:
-                subblocks_right.append(right_block)
-                right -= 1
+                blocks = (
+                    blocks[:space_block_index]
+                    + movement_blocks
+                    + blocks[space_block_index + 1 : right_index]
+                    + target_space_blocks
+                    + blocks[right_index + 1 :]
+                )
 
-        curr_blocks = subblocks_left + subblocks_right[::-1]
-        curr_blocks = combine_space_blocks(curr_blocks)
+                if space_block.size > target_block.size:
+                    right_index += 1
 
-        if moves == 0:
-            done = True
+            right_index -= 1
 
-    return curr_blocks
+    return blocks
 
-def show_blocks(blocks: list[Block]) -> None:
+
+def print_blocks(blocks: list[Block]) -> None:
     for b in blocks:
-        c = "." if b.id == SPACE_ID else str(b.id)
-        print(c * b.size, end="")
+        if b.id == SPACE_ID:
+            print("|" + ("." * b.size) + "|", end="")
+        else:
+            print(f"|{str(b.id)}**{b.size}|", end="")
+            # print(str(b.id)*b.size, end="")
     print()
+
 
 def solve_part1():
     blocks = read_blocks()
@@ -150,6 +182,7 @@ def solve_part1():
 def solve_part2():
     blocks = read_blocks()
     blocks = compress_blocks_part2(blocks)
+    print_blocks(blocks)
     answer = checksum(blocks)
     print(answer)
 
