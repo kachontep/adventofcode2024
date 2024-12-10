@@ -3,7 +3,9 @@ import sys
 from collections import defaultdict, namedtuple
 from typing import Iterator
 
+
 MAP_BLANK_STATE = "."
+MAP_ANTINODE_STATE = "#"
 
 
 class Pos(namedtuple("_Pos", "x y")):
@@ -24,7 +26,7 @@ def read_map_state() -> tuple[MaxXYPos, AttenaGroups]:
     attena_groups = defaultdict(list)
     max_x, max_y = -1, -1
     for pos, c in traverse_map_states():
-        if c != MAP_BLANK_STATE:
+        if c != MAP_BLANK_STATE and c != MAP_ANTINODE_STATE:
             attena_groups[c].append(pos)
         if max_x < pos.x:
             max_x = pos.x
@@ -40,29 +42,43 @@ def generate_combination(poss: list[Pos]) -> Iterator[tuple[Pos, Pos]]:
             yield poss[i], poss[j]
 
 
-def compute_antinodes(src: Pos, tgt: Pos) -> tuple[Pos, Pos]:
+def compute_antinodes_part2(src: Pos, tgt: Pos, max_pos: Pos) -> list[Pos]:
+    def repeat_in_bound(p: Pos, dist_vec: Pos) -> list[Pos]:
+        result = [p]
+        done = False
+        q = p
+        while not done:
+            q = Pos(q.x + dist_vec.x, q.y + dist_vec.y)
+            if not is_bounded(q, max_pos):
+                done = True
+            else:
+                result.append(q)
+        return result
+
     dist_vec = Pos(tgt.x - src.x, tgt.y - src.y)
-    antinode_src = Pos(src.x - dist_vec.x, src.y - dist_vec.y)
-    antinode_tgt = Pos(tgt.x + dist_vec.x, tgt.y + dist_vec.y)
-    return antinode_src, antinode_tgt
+    src_antinodes = repeat_in_bound(src, Pos(dist_vec.x * -1, dist_vec.y * -1))
+    tgt_antinodes = repeat_in_bound(tgt, dist_vec)
+    return src_antinodes + tgt_antinodes
 
 
-def is_in_map(p: Pos, max_x: int, max_y: int) -> bool:
-    return 0 <= p.x <= max_x and 0 <= p.y <= max_y
+def is_bounded(p: Pos, max_xy: Pos) -> bool:
+    return 0 <= p.x <= max_xy.x and 0 <= p.y <= max_xy.y
 
 
-def main():
+def solve_part2():
     max_pos, attena_groups = read_map_state()
     total_antinodes = []
     for _, poss in attena_groups.items():
         for src, tgt in generate_combination(poss):
-            pair_antinodes = compute_antinodes(src, tgt)
-            bounded_antinodes = [
-                n for n in pair_antinodes if is_in_map(n, max_pos.x, max_pos.y)
-            ]
-            total_antinodes.extend(bounded_antinodes)
+            pair_antinodes = compute_antinodes_part2(src, tgt, max_pos)
+            total_antinodes.extend(pair_antinodes)
     unique_antinodes = len(set(total_antinodes))
     print(unique_antinodes)
+
+
+def main():
+    # solve_part1()
+    solve_part2()
 
 
 if __name__ == "__main__":
