@@ -15,11 +15,13 @@ def read_blocks(SPACE_ID, Block) -> list[Block]:
 
 
 def checksum(blocks: list[Block]) -> int:
+    def block_sum(start_pos: int, total: int, b: Block) -> tuple[int, int]:
+        return start_pos + b.size, total + sum(
+            i * b.id for i in range(start_pos, start_pos + b.size)
+        )
+
     _, result = reduce(
-        lambda c, b: (
-            c[0] + b.size,
-            c[1] + sum([i * b.id for i in range(c[0], c[0] + b.size)]),
-        ),
+        lambda c, b: block_sum(c[0], c[1], b),
         blocks[:-1],
         (0, 0),
     )
