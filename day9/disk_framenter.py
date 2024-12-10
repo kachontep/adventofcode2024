@@ -74,41 +74,12 @@ def compress_blocks_part1(blocks: list[Block]) -> list[Block]:
     return compressed
 
 
-def compact_spaces(blocks: list[Block]) -> list[Block]:
-    begin_space_idx = None
-    block_len = len(blocks)
-    block_size = block_len
-    idx = 0
-    while idx < block_size:
-        b = blocks[idx]
-
-        if b.id != SPACE_ID:
-            if begin_space_idx and idx - begin_space_idx > 1:
-                compacted = [b_.size for b_ in blocks[begin_space_idx : idx + 1]]
-                compacted_more_idx = len(compacted) - 1
-                sum_compacted_spaces = sum(compacted)
-                new_space_blocks = [Block(SPACE_ID, sum_compacted_spaces)]
-
-                blocks = (
-                    blocks[:begin_space_idx]
-                    + new_space_blocks
-                    + blocks[idx + 1 :]
-                )
-                block_size -= compacted_more_idx
-                begin_space_idx = None
-        elif not begin_space_idx:
-            begin_space_idx = idx
-
-        idx += 1
-    return blocks
-
-
 def compress_blocks_part2(blocks: list[Block]) -> list[Block]:
     do_more = True
 
     while do_more:
-        do_more = False
 
+        do_more = False
         left_index = 0
         right_index = len(blocks) - 1
 
@@ -136,6 +107,8 @@ def compress_blocks_part2(blocks: list[Block]) -> list[Block]:
 
             if space_block:
                 do_more = True
+                skip_right_index = False
+
                 target_space_blocks = [Block(SPACE_ID, target_block.size)]
 
                 if space_block.size > target_block.size:
@@ -143,6 +116,7 @@ def compress_blocks_part2(blocks: list[Block]) -> list[Block]:
                         SPACE_ID, space_block.size - target_block.size
                     )
                     movement_blocks = [target_block, new_space_block]
+                    skip_right_index = True
                 else:
                     movement_blocks = [target_block]
 
@@ -154,7 +128,7 @@ def compress_blocks_part2(blocks: list[Block]) -> list[Block]:
                     + blocks[right_index + 1 :]
                 )
 
-                if space_block.size > target_block.size:
+                if skip_right_index:
                     right_index += 1
 
             right_index -= 1
