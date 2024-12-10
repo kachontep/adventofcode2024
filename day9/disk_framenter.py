@@ -74,20 +74,30 @@ def compress_blocks_part1(blocks: list[Block]) -> list[Block]:
     return compressed
 
 
+def combine_space_blocks(blocks: list[Block]) -> list[Block]:
+    result = blocks[:1][:]
+    for current_block in blocks[1:]:
+        if current_block.id == SPACE_ID and result[-1].id == SPACE_ID:
+            last_block = result.pop()
+            result.append(Block(SPACE_ID, last_block.size + current_block.size))
+        else:
+            result.append(current_block)
+    return result
+
+
 def compress_blocks_part2(blocks: list[Block]) -> list[Block]:
     done = False
-    result = blocks[:]
+    curr_blocks = blocks[:]
 
     while not done:
-
         moves = 0
         left = 0
-        right = len(result) - 1
+        right = len(curr_blocks) - 1
         subblocks_left = []
         subblocks_right = []
 
         while left <= right:
-            left_block, right_block = result[left], result[right]
+            left_block, right_block = curr_blocks[left], curr_blocks[right]
 
             if left_block.id != SPACE_ID:
                 subblocks_left.append(left_block)
@@ -100,12 +110,12 @@ def compress_blocks_part2(blocks: list[Block]) -> list[Block]:
                 continue
 
             _, space_left = left_block
-            block_id, space_used = right_block
+            right_block_id, space_used = right_block
 
             if space_left >= space_used:
                 subblocks_right.append(Block(SPACE_ID, space_used))
 
-                subblocks_left.append(Block(block_id, space_used))
+                subblocks_left.append(Block(right_block_id, space_used))
                 if space_left > space_used:
                     subblocks_left.append(Block(SPACE_ID, space_left - space_used))
 
@@ -116,13 +126,19 @@ def compress_blocks_part2(blocks: list[Block]) -> list[Block]:
                 subblocks_right.append(right_block)
                 right -= 1
 
-        result = subblocks_left + subblocks_right
+        curr_blocks = subblocks_left + subblocks_right[::-1]
+        curr_blocks = combine_space_blocks(curr_blocks)
 
         if moves == 0:
             done = True
-            
-    return result
 
+    return curr_blocks
+
+def show_blocks(blocks: list[Block]) -> None:
+    for b in blocks:
+        c = "." if b.id == SPACE_ID else str(b.id)
+        print(c * b.size, end="")
+    print()
 
 def solve_part1():
     blocks = read_blocks()
@@ -134,9 +150,9 @@ def solve_part1():
 def solve_part2():
     blocks = read_blocks()
     blocks = compress_blocks_part2(blocks)
-    print(blocks)
     answer = checksum(blocks)
     print(answer)
+
 
 def main():
     # solve_part1()
