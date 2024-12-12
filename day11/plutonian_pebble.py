@@ -11,7 +11,6 @@ def main():
     print(f"#num_stones: {total_stones}")
 
 
-
 def solve_part_1(stones: list[int]) -> int:
     return sum(stones_count(s, 25) for s in stones)
 
@@ -35,6 +34,7 @@ def stones_count(x: int, n: int, t: int = 0, c: int = 1) -> int:
         )
     else:
         return stones_count(x * 2024, n, t + 1, c)
+
 
 if __name__ == "__main__":
     main()
