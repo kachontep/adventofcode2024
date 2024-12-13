@@ -1,5 +1,5 @@
-from functools import lru_cache
 import sys
+from functools import lru_cache
 
 
 def main():
