@@ -67,7 +67,7 @@ def num_borders_from_perims(perims: list[tuple[int, int, int]]) -> int:
 
     borders = [i for i, _ in enumerate(perims)]
     for i, j in relations:
-        i, j = min(i, j), max(i, j)
+        i, j = (j, i) if j < i else (i, j)
         for k in range(len(borders)):
             if borders[k] == borders[j]:
                 borders[k] = borders[i]
@@ -102,7 +102,7 @@ def solve_part1():
 
 def solve_part2():
     table = [[c for c in list(line.rstrip())] for line in sys.stdin.readlines()]
-    show_map(table)
+    # show_map(table)
 
     marked = [[False for _ in row] for row in table]
 
@@ -116,7 +116,7 @@ def solve_part2():
             area, perims, region = survey(r, c, table)  # Part 2
             borders_num = num_borders_from_perims(perims)
 
-            show_info(table[r][c], area, borders_num, region)
+            # show_info(table[r][c], area, borders_num, region)
             total_cost += area * borders_num
 
             for mr, mc in region:
