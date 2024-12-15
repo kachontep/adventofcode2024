@@ -6,8 +6,8 @@ def main():
     stones = list(map(int, sys.stdin.read().split()))
     print(f"stones: {stones!r}")
 
-    total_stones = solve_part_1(stones)
-    # total_stones = solve_part_2(stones)
+    # total_stones = solve_part_1(stones)
+    total_stones = solve_part_2(stones)
     print(f"#num_stones: {total_stones}")
 
 
@@ -20,20 +20,21 @@ def solve_part_2(stones: list[int]) -> int:
 
 
 @lru_cache(maxsize=None)
-def stones_count(x: int, n: int, t: int = 0, c: int = 1) -> int:
-    if t == n:
-        return c
+def stones_count(x: int, t: int) -> int:
+    if t == 0: # any stone value without blinking returns 1
+        return 1
+    
     if x == 0:
-        return stones_count(1, n, t + 1, c)
+        return stones_count(1, t - 1)
+    
     s = str(x)
     s_len = len(s)
+
     if s_len % 2 == 0:
         mid = s_len // 2
-        return stones_count(int(s[:mid]), n, t + 1, c) + stones_count(
-            int(s[mid:]), n, t + 1, c
-        )
+        return stones_count(int(s[:mid]), t - 1) + stones_count(int(s[mid:]), t - 1)
     else:
-        return stones_count(x * 2024, n, t + 1, c)
+        return stones_count(x * 2024, t - 1)
 
 
 if __name__ == "__main__":
