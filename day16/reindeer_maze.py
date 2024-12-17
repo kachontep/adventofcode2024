@@ -18,10 +18,24 @@ WALK_WAYS = {
     "<": list("<^v"),
     "^": list("^<>"),
     ">": list(">^v"),
-    "v": list("<v>"),
+    "v": list("v<>"),
     " ": list("^>v<"),
 }
 
+
+TURN_STYLES = {
+    ("S", "^"),
+    ("^", ">"),
+    ("^", "<"),
+    (">", "^"),
+    (">", "v"),
+    ("v", ">"),
+    ("v", "<"),
+    ("<", "^"),
+    ("<", "v"),
+}
+
+TURN_COST = 1_000
 World = list[list[str]]
 Point = namedtuple("Point", "x y")
 
@@ -66,66 +80,9 @@ def reveal_the_world(world):
         print()
 
 
-def show_summary(world, travel_path, travel_cost):
+def show_travel_path_with_cost(world, travel_path, travel_cost):
     show_travel_path(travel_path, world)
     print("cost: ", travel_cost)
-
-
-def main():
-    world = get_world()
-    width, height = world_dimension(world)
-    start, end = start_and_end(world)
-
-    reveal_the_world(world)
-    print(start, end)
-
-    fringe = deque()
-    fringe.append((start, "S"))
-
-    path_costs = [[float("inf") for _ in range(width)] for _ in range(height)]
-
-    travel_path: list[str] | None = None
-    travel_cost = float("inf")
-
-    while fringe:
-        s = fringe.pop()
-        loc, journal = s
-
-        cost = path_cost(journal)
-        print(f"{loc.x},{loc.y}", "path: ", journal, "cost: ", cost)
-        if cost >= path_costs[loc.y][loc.x]:
-            continue
-        path_costs[loc.y][loc.x] = cost
-
-        if world[loc.y][loc.x] == END and cost < travel_cost:
-            travel_path = journal
-            travel_cost = cost
-            continue
-
-        ways = journal[-1]
-        for w in WALK_WAYS[ways]:
-            if (m := next_move(loc, w, width, height)) and world[m.y][m.x] != BLOCK:
-                fringe.appendleft((m, journal + w))
-
-    if travel_path is None:
-        raise SystemExit("No travel paths found for this world")
-
-    show_summary(world, travel_path, travel_cost)
-
-
-TURN_STYLES = {
-    ("S", "^"),
-    ("^", ">"),
-    ("^", "<"),
-    (">", "^"),
-    (">", "v"),
-    ("v", ">"),
-    ("v", "<"),
-    ("<", "^"),
-    ("<", "v"),
-}
-
-TURN_COST = 1_000
 
 
 def path_cost(travel_path: list[str]) -> int:
@@ -156,6 +113,95 @@ def show_travel_path(travel_path: list[str], world: World):
         ww = w
 
     reveal_the_world(traveled_world)
+
+
+def main():
+    solve_part1()
+
+
+def solve_part1():
+    world = get_world()
+    width, height = world_dimension(world)
+    start, end = start_and_end(world)
+
+    reveal_the_world(world)
+
+    fringe = deque()
+    fringe.append((start, "S"))
+
+    path_costs = [[float("inf") for _ in range(width)] for _ in range(height)]
+
+    travel_paths: list[list[str]] = []
+    # travel_path: list[str] | None = None
+    travel_cost = float("inf")
+
+    while fringe:
+        s = fringe.popleft()
+        loc, journal = s
+
+        cost = path_cost(journal)
+
+        print(f"{loc.x},{loc.y}", "path: ", journal, "cost: ", cost, "path_costs:", path_costs[loc.y][loc.x])
+
+        if cost  >= path_costs[loc.y][loc.x]:
+            continue
+        
+        path_costs[loc.y][loc.x] = cost
+
+        if world[loc.y][loc.x] == END:
+            print(f"{loc.x},{loc.y}", "path: ", journal, "cost: ", cost, "travel_cost", travel_cost)
+            if cost < travel_cost:
+                travel_paths.clear()
+            travel_paths.append(journal)
+            travel_cost = cost
+            continue
+
+        ways = journal[-1]
+        for w in WALK_WAYS[ways]:
+            if (m := next_move(loc, w, width, height)) and world[m.y][m.x] != BLOCK:
+                fringe.append((m, journal + w))
+
+    if not travel_paths:
+        raise SystemExit("No travel paths found for this world")
+
+    print("Best path(s): ", len(travel_paths))
+    for tp in travel_paths:
+        show_travel_path_with_cost(world, tp, travel_cost)
+
+    sit_paths = best_sit_paths(travel_paths, world)
+    show_best_sit_paths(sit_paths, world)
+    print(f"There are {len(sit_paths)} best sit path(s) in this world")
+
+
+def best_sit_paths(travel_paths: list[list[str]], world: World) -> set[Point]:
+    start, _ = start_and_end(world)
+    width, height = world_dimension(world)
+
+    result = set()
+    for tp in travel_paths:
+        p = start
+        result.add(p)
+        for w in tp:
+            q = next_move(p, w, width, height)
+            if not q:
+                continue
+            p = q
+            result.add(p)
+    return result
+
+
+def show_best_sit_paths(sit_paths: set[Point], world: World) -> None:
+    for y, r in enumerate(world):
+        for x, c in enumerate(r):
+            if (x, y) in sit_paths:
+                print("O", end="")
+            else:
+                print(c, end="")
+        print()
+
+
+def show_best_sit_Paths(sit_paths: set[Point], world: World) -> None:
+    pass
 
 
 if __name__ == "__main__":
