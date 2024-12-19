@@ -1,4 +1,3 @@
-from os import walk
 import sys
 from collections import deque, namedtuple
 
@@ -54,7 +53,7 @@ def start_and_end(world: World) -> tuple[Point, Point]:
     return start, end
 
 
-def next_move(p: Point, w: str, width: int, height: int) -> Point | None:
+def move_next(p: Point, w: str, width: int, height: int) -> Point | None:
     x, y = p
     if w == UP:
         x, y = p.x, p.y - 1
@@ -64,6 +63,21 @@ def next_move(p: Point, w: str, width: int, height: int) -> Point | None:
         x, y = p.x, p.y + 1
     elif w == LEFT:
         x, y = p.x - 1, p.y
+    if x >= 0 and x < width and y >= 0 and y < height:
+        return Point(x, y)
+    return None
+
+
+def move_prev(p: Point, w: str, width: int, height: int) -> Point | None:
+    x, y = p
+    if w == UP:
+        x, y = p.x, p.y + 1
+    elif w == RIGHT:
+        x, y = p.x - 1, p.y
+    elif w == DOWN:
+        x, y = p.x, p.y - 1
+    elif w == LEFT:
+        x, y = p.x + 1, p.y
     if x >= 0 and x < width and y >= 0 and y < height:
         return Point(x, y)
     return None
@@ -85,7 +99,35 @@ def show_travel_path_with_cost(world, travel_path, travel_cost):
     print("cost: ", travel_cost)
 
 
-def path_cost(travel_path: list[str]) -> int:
+def compute_path_cost(
+    p: Point, travel_path: list[str], world: World, width: int, height: int
+) -> int:
+    result = calculate_travel_cost(travel_path)
+    if (m := move_next(p, travel_path[-1], width, height)) and world[m.y][m.x] == BLOCK:
+        result += TURN_COST
+    return result
+
+
+def calculate_path_cost(
+    travel_path: list[str], loc: Point, world: World, width: int, height: int
+) -> int:
+    travel_cost = calculate_travel_cost(travel_path)
+    move_costs = [TURN_COST if (p, q) in TURN_STYLES else 0
+        for p, q in [
+            (travel_path[-1], w)
+            for w, m in [
+                (w, move_next(loc, w, width, height))
+                for w in WALK_WAYS[travel_path[-1]]
+            ]
+            if m and world[m.y][m.x] != BLOCK
+        ]
+     ]
+    min_move_cost = sum(move_costs) if move_costs else 0
+    result = travel_cost + min_move_cost
+    return result
+
+
+def calculate_travel_cost(travel_path: list[str]) -> int:
     total_cost = 0
     for p, q in zip(travel_path[:-1], travel_path[1:]):
         if (p, q) in TURN_STYLES:
@@ -106,7 +148,7 @@ def show_travel_path(travel_path: list[str], world: World):
     ww = START
     for w in travel_path:
         traveled_world[p.y][p.x] = ww
-        q = next_move(p, w, width, height)
+        q = move_next(p, w, width, height)
         if not q:
             continue
         p = q
@@ -116,7 +158,8 @@ def show_travel_path(travel_path: list[str], world: World):
 
 
 def main():
-    solve_part1()
+    # solve_part1()
+    solve_part2()
 
 
 def solve_part1():
@@ -129,44 +172,86 @@ def solve_part1():
     fringe = deque()
     fringe.append((start, "S"))
 
-    path_costs = [[float("inf") for _ in range(width)] for _ in range(height)]
+    min_path_costs = [[float("inf") for _ in range(width)] for _ in range(height)]
 
-    travel_paths: list[list[str]] = []
-    # travel_path: list[str] | None = None
-    travel_cost = float("inf")
+    travel_path: list[str] | None = None
+    min_travel_cost = float("inf")
 
     while fringe:
         s = fringe.popleft()
         loc, journal = s
 
-        cost = path_cost(journal)
-
-        print(f"{loc.x},{loc.y}", "path: ", journal, "cost: ", cost, "path_costs:", path_costs[loc.y][loc.x])
-
-        if cost  >= path_costs[loc.y][loc.x]:
+        travel_cost = calculate_travel_cost(journal)
+        if travel_cost > min_path_costs[loc.y][loc.x]:
             continue
-        
-        path_costs[loc.y][loc.x] = cost
+
+        min_path_costs[loc.y][loc.x] = travel_cost
 
         if world[loc.y][loc.x] == END:
-            print(f"{loc.x},{loc.y}", "path: ", journal, "cost: ", cost, "travel_cost", travel_cost)
-            if cost < travel_cost:
-                travel_paths.clear()
-            travel_paths.append(journal)
-            travel_cost = cost
+            travel_path = journal
+            min_travel_cost = travel_cost
             continue
 
         ways = journal[-1]
         for w in WALK_WAYS[ways]:
-            if (m := next_move(loc, w, width, height)) and world[m.y][m.x] != BLOCK:
+            if (m := move_next(loc, w, width, height)) and world[m.y][m.x] != BLOCK:
+                fringe.append((m, journal + w))
+
+    if travel_path is None:
+        raise SystemExit("No travel paths found for this world")
+    show_travel_path_with_cost(world, travel_path, min_travel_cost)
+
+
+def solve_part2():
+    world = get_world()
+    width, height = world_dimension(world)
+    start, _ = start_and_end(world)
+
+    # reveal_the_world(world)
+
+    fringe = deque()
+    fringe.append((start, "S"))
+
+    min_path_costs = [[float("inf") for _ in range(width)] for _ in range(height)]
+
+    travel_paths: list[list[str]] = []
+    min_travel_cost = float("inf")
+
+    while fringe:
+        s = fringe.popleft()
+        loc, journal = s
+
+        path_cost = calculate_path_cost(journal, loc, world, width, height)
+
+        # print("loc:", loc, "journal:", journal, "path_cost:", path_cost, "min_path_costs:", min_path_costs[loc.y][loc.x])
+
+        if path_cost > min_path_costs[loc.y][loc.x]:
+            continue
+        min_path_costs[loc.y][loc.x] = path_cost
+
+        travel_cost = calculate_travel_cost(journal)
+        if world[loc.y][loc.x] == END and travel_cost <= min_travel_cost:
+            if travel_cost < min_travel_cost:
+                travel_paths.clear()
+                min_travel_cost = travel_cost
+            travel_paths.append(journal)
+            continue
+
+        if travel_cost > min_travel_cost:
+            continue
+
+        ways = journal[-1]
+        for w in WALK_WAYS[ways]:
+            if (m := move_next(loc, w, width, height)) and world[m.y][m.x] != BLOCK:
                 fringe.append((m, journal + w))
 
     if not travel_paths:
         raise SystemExit("No travel paths found for this world")
 
     print("Best path(s): ", len(travel_paths))
-    for tp in travel_paths:
-        show_travel_path_with_cost(world, tp, travel_cost)
+    for i, tp in enumerate(travel_paths, start=1):
+        print(i, ":", min_travel_cost, ":", "journal:", tp)
+        # show_travel_path_with_cost(world, tp, min_travel_cost)
 
     sit_paths = best_sit_paths(travel_paths, world)
     show_best_sit_paths(sit_paths, world)
@@ -182,10 +267,7 @@ def best_sit_paths(travel_paths: list[list[str]], world: World) -> set[Point]:
         p = start
         result.add(p)
         for w in tp:
-            q = next_move(p, w, width, height)
-            if not q:
-                continue
-            p = q
+            p = move_next(p, w, width, height) # type: ignore
             result.add(p)
     return result
 
@@ -198,10 +280,6 @@ def show_best_sit_paths(sit_paths: set[Point], world: World) -> None:
             else:
                 print(c, end="")
         print()
-
-
-def show_best_sit_Paths(sit_paths: set[Point], world: World) -> None:
-    pass
 
 
 if __name__ == "__main__":
