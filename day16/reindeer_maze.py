@@ -1,3 +1,5 @@
+from heapq import heapify
+import heapq
 import sys
 from collections import deque, namedtuple
 
@@ -209,27 +211,21 @@ def solve_part2():
 
     # reveal_the_world(world)
 
-    fringe = deque()
-    fringe.append((start, "S"))
-
-    min_path_costs = [[float("inf") for _ in range(width)] for _ in range(height)]
+    fringe = []
+    heapq.heappush(fringe, (0, start, "S"))
 
     travel_paths: list[list[str]] = []
     min_travel_cost = float("inf")
 
     while fringe:
-        s = fringe.popleft()
-        loc, journal = s
+        s = heapq.heappop(fringe)
+        travel_cost, loc, journal,  = s
 
-        path_cost = calculate_path_cost(journal, loc, world, width, height)
+        # print("loc:", loc, "journal:", journal, "cost:", travel_cost, "min_cost", min_travel_cost)
 
-        # print("loc:", loc, "journal:", journal, "path_cost:", path_cost, "min_path_costs:", min_path_costs[loc.y][loc.x])
-
-        if path_cost > min_path_costs[loc.y][loc.x]:
+        if travel_cost > min_travel_cost:
             continue
-        min_path_costs[loc.y][loc.x] = path_cost
 
-        travel_cost = calculate_travel_cost(journal)
         if world[loc.y][loc.x] == END and travel_cost <= min_travel_cost:
             if travel_cost < min_travel_cost:
                 travel_paths.clear()
@@ -237,13 +233,10 @@ def solve_part2():
             travel_paths.append(journal)
             continue
 
-        if travel_cost > min_travel_cost:
-            continue
-
         ways = journal[-1]
         for w in WALK_WAYS[ways]:
             if (m := move_next(loc, w, width, height)) and world[m.y][m.x] != BLOCK:
-                fringe.append((m, journal + w))
+                heapq.heappush(fringe, (calculate_travel_cost(journal + w), m, journal + w))
 
     if not travel_paths:
         raise SystemExit("No travel paths found for this world")
