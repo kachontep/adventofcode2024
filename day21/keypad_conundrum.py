@@ -50,7 +50,7 @@ def num2dir(x: str) -> str:
             if y_diff != 0
             else ""
         )
-        if src_loc[1] == 3:
+        if src_loc[1] == 4:
             actions.append(y_moves + x_moves + "A")
         else:
             actions.append(x_moves + y_moves + "A")
@@ -74,20 +74,16 @@ def dir2dir(x: str) -> str:
             if y_diff != 0
             else ""
         )
-        if src_loc[0] == 1:
-            actions.append(x_moves + y_moves + "A")
-        else:
+        if src_loc[1] == 1:
             actions.append(y_moves + x_moves + "A")
-        # print(str(i) + ":", x[:i+1], ":>", src, dest, ":-", actions[-1])
+        else:
+            actions.append(x_moves + y_moves + "A")
     result = "".join(actions)
     return result
 
 def control(x: str) -> str:
-    # return x
-    # return num2dir(x)
-    # return dir2dir(num2dir(x))
     return dir2dir(dir2dir(num2dir(x)))
-    # return "\n".join([x, num2dir(x), dir2dir(num2dir(x)), dir2dir(dir2dir(num2dir(x)))])
+    # return "\n".join([x, num2dir(x), dir2dir(num2dir(x)), dir2dir(dir2dir(num2dir(x)))][::-1]) # DEBUG
 
 
 def get_codes():
@@ -99,9 +95,10 @@ def solve_part_1():
     codes = get_codes()
     answer = 0
     for code in codes:
-        # print(code + ":", control(code), len(control(code)))
-        print(int(code[:-1]), len(control(code)))
-        answer += int(code[:-1]) * len(control(code))
+        # print(control(code)) # DEBUG
+        complexity = int(code[:-1]) * len(control(code))
+        answer +=  complexity
+        print(len(control(code)), int(code[:-1]), complexity)
     print(answer)
 
 def main():
